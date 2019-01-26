@@ -275,7 +275,8 @@ test -n "$KDEWM" && KDEWM="--windowmanager $KDEWM"
 # lock now and do the rest of the KDE startup underneath the locker.
 KSMSERVEROPTIONS=""
 test -n "$dl" && KSMSERVEROPTIONS=" --lockscreen"
-kwrapper5 @CMAKE_INSTALL_FULL_BINDIR@/ksmserver $KDEWM $KSMSERVEROPTIONS
+kwin_x11 & # FIXME
+kwrapper5 @CMAKE_INSTALL_FULL_BINDIR@/plasma_session $KDEWM $KSMSERVEROPTIONS
 if test $? -eq 255; then
   # Startup error
   echo 'startkde: Could not start ksmserver. Check your installation.'  1>&2

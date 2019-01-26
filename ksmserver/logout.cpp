@@ -155,22 +155,22 @@ void KSMServer::shutdown( KWorkSpace::ShutdownConfirm confirm,
             break;
         }
     } else {
-        OrgKdeShutdownInterface shutdownIface(QStringLiteral("org.kde.Shutdown"),
-                                              QStringLiteral("/Shutdown"),
-                                              QDBusConnection::sessionBus());
-        switch (shutdownType) {
-        case KWorkSpace::ShutdownTypeHalt:
-            shutdownIface.logoutAndShutdown();
-            break;
-        case KWorkSpace::ShutdownTypeReboot:
-            shutdownIface.logoutAndReboot();
-            break;
-        case KWorkSpace::ShutdownTypeNone:
-            Q_FALLTHROUGH();
-        default:
-            shutdownIface.logout();
-            break;
-        }
+//        OrgKdeShutdownInterface shutdownIface(QStringLiteral("org.kde.Shutdown"),
+//                                              QStringLiteral("/Shutdown"),
+//                                              QDBusConnection::sessionBus());
+//        switch (shutdownType) {
+//        case KWorkSpace::ShutdownTypeHalt:
+//            shutdownIface.logoutAndShutdown();
+//            break;
+//        case KWorkSpace::ShutdownTypeReboot:
+//            shutdownIface.logoutAndReboot();
+//            break;
+//        case KWorkSpace::ShutdownTypeNone:
+//            Q_FALLTHROUGH();
+//        default:
+//            shutdownIface.logout();
+//            break;
+//        }
     }
 }
 

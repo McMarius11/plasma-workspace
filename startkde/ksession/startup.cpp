@@ -32,13 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ******************************************************************/
 
 #include "startup.h"
-#include "server.h"
 
-#include <config-workspace.h>
-#include <config-unix.h> // HAVE_LIMITS_H
-#include <config-ksmserver.h>
-
-#include <ksmserver_debug.h>
+#include "debug.h"
 
 #include "kcminit_interface.h"
 #include "kded_interface.h"
@@ -51,6 +46,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <KNotifyConfig>
 #include <KProcess>
 #include <KService>
+#include <KConfigGroup>
 
 #include <phonon/audiooutput.h>
 #include <phonon/mediaobject.h>
@@ -62,7 +58,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QDir>
 #include <QStandardPaths>
 #include <QTimer>
-#include <QX11Info>
 
 class Phase: public KCompositeJob
 {
@@ -93,7 +88,7 @@ public:
     StartupPhase0(QObject *parent) : Phase(parent)
     {}
     void start() override {
-        qCDebug(KSMSERVER) << "Phase 0";
+        qCDebug(KSESSION) << "Phase 0";
         addSubjob(new AutoStartAppsJob(0));
         addSubjob(new KCMInitJob(1));
     }
@@ -106,7 +101,7 @@ public:
     StartupPhase1(QObject *parent) : Phase(parent)
     {}
     void start() override {
-        qCDebug(KSMSERVER) << "Phase 1";
+        qCDebug(KSESSION) << "Phase 1";
         addSubjob(new AutoStartAppsJob(1));
     }
 };
@@ -121,7 +116,7 @@ public:
     bool migrateKDE4Autostart(const QString &folder);
 
     void start() override {
-        qCDebug(KSMSERVER) << "Phase 2";
+        qCDebug(KSESSION) << "Phase 2";
         addSubjob(new AutoStartAppsJob(2));
         addSubjob(new KDEDInitJob());
         addSubjob(new KCMInitJob(2));
@@ -149,7 +144,7 @@ class NotificationThread : public QThread
 
         QString soundFilename = notifyConfig.readEntry(QStringLiteral("Sound"));
         if (soundFilename.isEmpty()) {
-            qCWarning(KSMSERVER) << "Audio notification requested, but no sound file provided in notifyrc file, aborting audio notification";
+            qCWarning(KSESSION) << "Audio notification requested, but no sound file provided in notifyrc file, aborting audio notification";
             return;
         }
 
@@ -167,7 +162,7 @@ class NotificationThread : public QThread
             soundURL.clear();
         }
         if (soundURL.isEmpty()) {
-            qCWarning(KSMSERVER) << "Audio notification requested, but sound file from notifyrc file was not found, aborting audio notification";
+            qCWarning(KSESSION) << "Audio notification requested, but sound file from notifyrc file was not found, aborting audio notification";
             return;
         }
 
@@ -183,30 +178,35 @@ class NotificationThread : public QThread
 
 };
 
-Startup::Startup(KSMServer *parent):
-    QObject(parent),
-    ksmserver(parent)
+Startup::Startup(QObject *parent):
+    QObject(parent)
 {
     auto phase0 = new StartupPhase0(this);
     auto phase1 = new StartupPhase1(this);
     auto phase2 = new StartupPhase2(this);
-    auto restoreSession = new RestoreSessionJob(ksmserver);
+//    auto restoreSession = new RestoreSessionJob(ksmserver);
 
-    connect(ksmserver, &KSMServer::windowManagerLoaded, phase0, &KJob::start);
+//    connect(ksmserver, &KSMServer::windowManagerLoaded, phase0, &KJob::start);
     connect(phase0, &KJob::finished, phase1, &KJob::start);
 
     connect(phase1, &KJob::finished, this, [=]() {
-        ksmserver->setupShortcuts(); // done only here, because it needs kglobalaccel :-/
+//        ksmserver->setupShortcuts(); // done only here, because it needs kglobalaccel :-/
     });
 
-    connect(phase1, &KJob::finished, restoreSession, &KJob::start);
-    connect(restoreSession, &KJob::finished, phase2, &KJob::start);
+//    connect(phase1, &KJob::finished, restoreSession, &KJob::start);
+//    connect(restoreSession, &KJob::finished, phase2, &KJob::start);
+    upAndRunning("ksmserver");
+
+//DAVE - replace this
+    connect(phase1, &KJob::finished, phase2, &KJob::start);
 
     connect(phase1, &KJob::finished, this, []() {
         NotificationThread *loginSound = new NotificationThread();
         connect(loginSound, &NotificationThread::finished, loginSound, &NotificationThread::deleteLater);
         loginSound->start();});
     connect(phase2, &KJob::finished, this, &Startup::finishStartup);
+
+    phase0->start();
 }
 
 void Startup::upAndRunning( const QString& msg )
@@ -221,9 +221,9 @@ void Startup::upAndRunning( const QString& msg )
 
 void Startup::finishStartup()
 {
-    qCDebug(KSMSERVER) << "Finished";
-    ksmserver->state = KSMServer::Idle;
-    ksmserver->setupXIOErrorHandler();
+    qCDebug(KSESSION) << "Finished";
+//    ksmserver->state = KSMServer::Idle;
+//    ksmserver->setupXIOErrorHandler();
     upAndRunning(QStringLiteral("ready"));
 }
 
@@ -254,7 +254,7 @@ KDEDInitJob::KDEDInitJob()
 }
 
 void KDEDInitJob::start() {
-    qCDebug(KSMSERVER());
+    qCDebug(KSESSION());
     org::kde::kded5 kded( QStringLiteral("org.kde.kded5"),
                          QStringLiteral("/kded"),
                          QDBusConnection::sessionBus());
@@ -265,24 +265,25 @@ void KDEDInitJob::start() {
     connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
 }
 
-RestoreSessionJob::RestoreSessionJob(KSMServer *server): KJob(),
-    m_ksmserver(server)
-{}
+//RestoreSessionJob::RestoreSessionJob(KSMServer *server): KJob(),
+//    m_ksmserver(server)
+//{}
 
-void RestoreSessionJob::start()
-{
-    if (m_ksmserver->defaultSession()) {
-        QTimer::singleShot(0, this, [this]() {emitResult();});
-        return;
-    }
+//void RestoreSessionJob::start()
+//{
+//    if (m_ksmserver->defaultSession()) {
+//        QTimer::singleShot(0, this, [this]() {emitResult();});
+//        return;
+//    }
 
-    m_ksmserver->restoreLegacySession(KSharedConfig::openConfig().data());
-    m_ksmserver->lastAppStarted = 0;
-    m_ksmserver->lastIdStarted.clear();
-    m_ksmserver->state = KSMServer::Restoring;
-    connect(m_ksmserver, &KSMServer::sessionRestored, this, [this]() {emitResult();});
-    m_ksmserver->tryRestoreNext();
-}
+
+//     m_ksmserver->restoreLegacySession(KSharedConfig::openConfig().data());
+//    m_ksmserver->lastAppStarted = 0;
+//    m_ksmserver->lastIdStarted.clear();
+//    m_ksmserver->state = KSMServer::Restoring;
+//    connect(m_ksmserver, &KSMServer::sessionRestored, this, [this]() {emitResult();});
+//    m_ksmserver->tryRestoreNext();
+//}
 
 void StartupPhase2::runUserAutostart()
 {
@@ -308,12 +309,12 @@ void StartupPhase2::runUserAutostart()
         {
             const QString fullPath = dir.absolutePath() + QLatin1Char('/') + file;
 
-            qCInfo(KSMSERVER) << "Starting autostart script " << fullPath;
+            qCInfo(KSESSION) << "Starting autostart script " << fullPath;
             auto p = new KProcess; //deleted in onFinished lambda
             p->setProgram(fullPath);
             p->start();
             connect(p, static_cast<void (QProcess::*)(int)>(&QProcess::finished), [p](int exitCode) {
-                qCInfo(KSMSERVER) << "autostart script" << p->program() << "finished with exit code " << exitCode;
+                qCInfo(KSESSION) << "autostart script" << p->program() << "finished with exit code " << exitCode;
                 p->deleteLater();
             });
         }
@@ -336,7 +337,7 @@ bool StartupPhase2::migrateKDE4Autostart(const QString &autostartFolder)
     }
 
     const QDir oldFolder(oldAutostart);
-    qCDebug(KSMSERVER) << "Copying autostart files from" << oldFolder.path();
+    qCDebug(KSESSION) << "Copying autostart files from" << oldFolder.path();
     const QStringList entries = oldFolder.entryList(QDir::Files);
     foreach (const QString &file, entries) {
         const QString src = oldFolder.absolutePath() + QLatin1Char('/') + file;
@@ -350,7 +351,7 @@ bool StartupPhase2::migrateKDE4Autostart(const QString &autostartFolder)
             success = QFile::copy(src, dest);
         }
         if (!success) {
-            qCWarning(KSMSERVER) << "Error copying" << src << "to" << dest;
+            qCWarning(KSESSION) << "Error copying" << src << "to" << dest;
         }
     }
     return true;
@@ -363,7 +364,7 @@ AutoStartAppsJob::AutoStartAppsJob(int phase)
 }
 
 void AutoStartAppsJob::start() {
-    qCDebug(KSMSERVER());
+    qCDebug(KSESSION);
 
     QTimer::singleShot(0, this, [=]() {
         do {
@@ -379,13 +380,13 @@ void AutoStartAppsJob::start() {
             KService service(serviceName);
             auto arguments = KIO::DesktopExecParser(service, QList<QUrl>()).resultingArguments();
             if (arguments.isEmpty()) {
-                qCWarning(KSMSERVER) << "failed to parse" << serviceName << "for autostart";
+                qCWarning(KSESSION) << "failed to parse" << serviceName << "for autostart";
                 continue;
             }
-            qCInfo(KSMSERVER) << "Starting autostart service " << serviceName << arguments;
+            qCInfo(KSESSION) << "Starting autostart service " << serviceName << arguments;
             auto program = arguments.takeFirst();
             if (!QProcess::startDetached(program, arguments))
-                qCWarning(KSMSERVER) << "could not start" << serviceName << ":" << program << arguments;
+                qCWarning(KSESSION) << "could not start" << serviceName << ":" << program << arguments;
         } while (true);
     });
 }

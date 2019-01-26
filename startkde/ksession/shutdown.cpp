@@ -7,10 +7,8 @@
 #include <QProcess>
 #include <QStandardPaths>
 
-#include <kdisplaymanager.h>
-
-#include "server.h"
-#include "ksmserver_debug.h"
+// #include "server.h"
+#include "debug.h"
 
 
 Shutdown::Shutdown(QObject *parent):
@@ -23,7 +21,7 @@ Shutdown::Shutdown(QObject *parent):
     QDBusConnection::sessionBus().registerService(QStringLiteral("org.kde.Shutdown"));
 
     connect(qApp, &QCoreApplication::aboutToQuit, this, &Shutdown::logoutComplete);
-    connect(KSMServer::self(), &KSMServer::logoutCancelled, this, &Shutdown::logoutCancelled);
+//     connect(KSMServer::self(), &KSMServer::logoutCancelled, this, &Shutdown::logoutCancelled);
 }
 
 void Shutdown::logout()
@@ -43,9 +41,11 @@ void Shutdown::logoutAndReboot()
 
 void Shutdown::startLogout(KWorkSpace::ShutdownType shutdownType)
 {
-    auto ksmserver = KSMServer::self();
+//     auto ksmserver = KSMServer::self();
     m_shutdownType = shutdownType;
-    ksmserver->performLogout();
+//     ksmserver->performLogout();
+    //QDBus
+    //connect to logoutComplete
 }
 
 void Shutdown::logoutCancelled()
@@ -55,7 +55,7 @@ void Shutdown::logoutCancelled()
 
 void Shutdown::logoutComplete() {
     runShutdownScripts();
-    KDisplayManager().shutdown( m_shutdownType, KWorkSpace::ShutdownModeDefault);
+    //KDisplayManager().shutdown( m_shutdownType, KWorkSpace::ShutdownModeDefault);
 }
 
 void Shutdown::runShutdownScripts()
@@ -73,7 +73,7 @@ void Shutdown::runShutdownScripts()
             {
                 const QString fullPath = dir.absolutePath() + QLatin1Char('/') + file;
 
-                qCDebug(KSMSERVER) << "running shutdown script" << fullPath;
+                qCDebug(KSESSION) << "running shutdown script" << fullPath;
                 QProcess::execute(fullPath, QStringList());
             }
         }

@@ -29,22 +29,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "autostart.h"
 
-class KProcess;
-class KSMServer;
 class KCompositeJob;
 
 class Startup : public QObject
 {
 Q_OBJECT
 public:
-    Startup(KSMServer *parent);
+    Startup(QObject *parent);
     void upAndRunning( const QString& msg );
     void finishStartup();
 private:
     void autoStart(int phase);
-
-private:
-    KSMServer *ksmserver = nullptr;
 };
 
 class KCMInitJob: public KJob
@@ -75,13 +70,13 @@ private:
     AutoStart m_autoStart;
 };
 
-class RestoreSessionJob: public KJob
-{
-Q_OBJECT
-public:
-    RestoreSessionJob(KSMServer *ksmserver);
-    void start() override;
-private:
-    KSMServer *m_ksmserver;
-};
+//class RestoreSessionJob: public KJob
+//{
+//Q_OBJECT
+//public:
+//    RestoreSessionJob(KSMServer *ksmserver);
+//    void start() override;
+//private:
+//    KSMServer *m_ksmserver;
+//};
 
