@@ -24,8 +24,13 @@
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
+
+    // This is needed with KJobs in a QCoreApplication as when they finish
+    // the internal QEventLoopLocker expires and our app exits
+    app.setQuitLockEnabled(false);
+
     auto startup = new Startup(&app);
     auto shutdown = new Shutdown(&app);
 
-    return app.exec();
+    app.exec();
 }
